@@ -20,6 +20,7 @@ const item = {
   relevanceScore: 80,
   budgetScore: 90,
   recencyScore: 56.67,
+  possibleDuplicates: [],
 }
 const result = { items: [item], total: 7, page: 1, pageSize: 6, totalPages: 2, asOf: '2026-10-30' }
 const response = (body: unknown, status = 200) => ({
@@ -82,6 +83,17 @@ describe('search experience', () => {
     )
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { name: '123 Main St' })).toBeInTheDocument()
+  })
+
+  it('flags possible duplicates', async () => {
+    const items = [
+      item,
+      { ...item, id: 'twin', possibleDuplicates: [{ source: 'MLS_B', id: 'B7' }] },
+    ]
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...result, items })))
+    render(<App />)
+    expect(await screen.findByText('Possibly the same home as MLS_B · B7')).toBeInTheDocument()
+    expect(screen.getAllByText(/Possibly the same home/)).toHaveLength(1)
   })
 
   it('keeps the submitted search and page in the URL', async () => {

@@ -293,6 +293,12 @@ export default function App() {
                           <b>{item.sqft.toLocaleString()}</b> sqft
                         </span>
                       </div>
+                      {item.possibleDuplicates.length > 0 && (
+                        <p className="possible-duplicate">
+                          Possibly the same home as{' '}
+                          {item.possibleDuplicates.map((d) => `${d.source} · ${d.id}`).join(', ')}
+                        </p>
+                      )}
                       <p className="description">{item.description}</p>
                       <div className="card-bottom">
                         <div>

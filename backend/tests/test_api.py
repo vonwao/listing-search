@@ -61,3 +61,9 @@ def test_empty_results_explain_why():
     assert message(city='Reston', minBedrooms=99) == 'No listings match these filters.'
     assert message(page=100) == 'Page 100 is past the last page (2).'
     assert message(city='Reston') is None
+
+
+def test_sample_data_flags_the_four_homes_listed_in_both_feeds():
+    items = client.get('/api/listings', params={'pageSize': 100}).json()['items']
+    pairs = {frozenset((row['id'], d['id'])) for row in items for d in row['possibleDuplicates']}
+    assert pairs == {frozenset(p) for p in [('A1', 'B7'), ('A2', 'B8'), ('A3', 'B9'), ('A5', 'B11')]}

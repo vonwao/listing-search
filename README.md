@@ -56,7 +56,7 @@ Rank using unrounded scores. Break ties by lower price, so an under-budget home 
 
 ## Choices and limits
 
-- Keep feeds separate. `(source, id)` is the identity. Four sample pairs (A1/B7, A2/B8, A3/B9, A5/B11) share identical coordinates and are probably the same home, but their prices differ, one pair's ZIP differs, and there is no rule for which record to trust. Both records are shown, so a page can list the same home twice. Merging needs a matching rule and a conflict policy.
+- Keep feeds separate. `(source, id)` is the identity. Four sample pairs (A1/B7, A2/B8, A3/B9, A5/B11) share identical coordinates and are probably the same home, but their prices differ, one pair's ZIP differs, and there is no rule for which record to trust. Both records are shown and labeled “Possibly the same home”, so a page can list a home twice. Only exact coordinate matches across feeds are flagged. Merging needs a matching rule and a conflict policy.
 - Recency has a small effect on older data. On October 30, 2026, sample recency scores ranged from 24 to 35, moving the final score by about 3 points while budget match moved it by about 12. Recency mostly separates close candidates, and scores fall slightly each day.
 - Include active, pending, and sold records because the brief does not specify an active-only filter.
 - Literal keyword search is not semantic: “pets” matches “no pets”. A pet-policy filter would need structured data or an explicit interpretation rule.

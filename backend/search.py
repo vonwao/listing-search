@@ -1,9 +1,10 @@
 """Pure search: no network, global state, or implicit clock."""
+from collections import defaultdict
 from datetime import date
 from math import ceil
 from collections.abc import Sequence
 
-from .models import Listing, SearchHit, SearchParams, SearchResponse
+from .models import Listing, ListingRef, SearchHit, SearchParams, SearchResponse
 
 
 def score(listing: Listing, target_budget: float | None, today: date) -> tuple[float, float | None, float]:
@@ -14,6 +15,21 @@ def score(listing: Listing, target_budget: float | None, today: date) -> tuple[f
         return recency, None, recency
     budget = max(0, 1 - abs(listing.price - target_budget) / target_budget)
     return 0.7 * budget + 0.3 * recency, budget, recency
+
+
+def possible_duplicates(listings: Sequence[Listing]) -> dict[tuple[str, str], list[ListingRef]]:
+    # Identical coordinates in different feeds suggest one home. Flag it, but do not merge:
+    # that needs a rule for which feed to trust.
+    by_location = defaultdict(list)
+    for listing in listings:
+        by_location[(listing.latitude, listing.longitude)].append(listing)
+    return {
+        (listing.source, listing.id): [
+            ListingRef(source=other.source, id=other.id) for other in group if other.source != listing.source
+        ]
+        for group in by_location.values()
+        for listing in group
+    }
 
 
 def empty_result_message(listings: Sequence[Listing], params: SearchParams, total: int, total_pages: int) -> str | None:
@@ -50,12 +66,14 @@ def search(listings: Sequence[Listing], params: SearchParams, *, today: date) ->
     ranked.sort(key=lambda row: (-row[0], row[1].price, row[1].source, row[1].id))
     total_pages = ceil(len(ranked) / params.pageSize)
     start = (params.page - 1) * params.pageSize
+    duplicates = possible_duplicates(listings)
     items = [
         SearchHit(
             **listing.model_dump(),
             relevanceScore=round(relevance * 100, 2),
             budgetScore=None if budget is None else round(budget * 100, 2),
             recencyScore=round(recency * 100, 2),
+            possibleDuplicates=duplicates[(listing.source, listing.id)],
         )
         for relevance, listing, budget, recency in ranked[start:start + params.pageSize]
     ]

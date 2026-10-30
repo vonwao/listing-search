@@ -106,3 +106,13 @@ def test_exactly_full_last_page_has_no_extra_page():
     past = search(rows, SearchParams(page=3, pageSize=2), today=TODAY)
     assert (len(last.items), last.totalPages, last.message) == (2, 2, None)
     assert (past.items, past.totalPages, past.message) == ([], 2, 'Page 3 is past the last page (2).')
+
+
+def test_identical_coordinates_in_different_feeds_are_flagged_but_not_merged():
+    rows = [listing('1', 'A'), listing('2', 'B'), listing('3', 'A'),
+            listing('4', 'B', latitude=39.0)]
+    items = {r.id: r for r in search(rows, SearchParams(), today=TODAY).items}
+    assert len(items) == 4
+    assert [(d.source, d.id) for d in items['1'].possibleDuplicates] == [('B', '2')]
+    assert [(d.source, d.id) for d in items['2'].possibleDuplicates] == [('A', '1'), ('A', '3')]
+    assert items['4'].possibleDuplicates == []

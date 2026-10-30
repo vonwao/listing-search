@@ -46,10 +46,16 @@ class SearchParams(BaseModel):
         return max_price
 
 
+class ListingRef(BaseModel):
+    source: str
+    id: str
+
+
 class SearchHit(Listing):
     relevanceScore: float
     budgetScore: float | None
     recencyScore: float
+    possibleDuplicates: list[ListingRef]
 
 
 class SearchResponse(BaseModel):

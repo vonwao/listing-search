@@ -431,3 +431,13 @@ footer {
     animation: none;
   }
 }
+
+.possible-duplicate {
+  align-self: flex-start;
+  font-size: 11px;
+  color: #7a5200;
+  background: #fbf4e4;
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin: 10px 0 0;
+}
