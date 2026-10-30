@@ -1,0 +1,58 @@
+from datetime import date
+from typing import Literal, Self
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class Listing(BaseModel):
+    model_config = ConfigDict(frozen=True, allow_inf_nan=False)
+
+    id: str
+    source: str
+    address: str
+    city: str
+    state: str
+    zip: str
+    price: float = Field(ge=0)
+    bedrooms: int = Field(ge=0)
+    bathrooms: float = Field(ge=0)
+    sqft: int = Field(ge=0)
+    latitude: float
+    longitude: float
+    listedDate: date
+    status: Literal['active', 'pending', 'sold']
+    description: str
+
+
+class SearchParams(BaseModel):
+    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True, allow_inf_nan=False)
+
+    minPrice: float | None = Field(default=None, ge=0)
+    maxPrice: float | None = Field(default=None, ge=0)
+    minBedrooms: int | None = Field(default=None, ge=0)
+    city: str = Field(default='', max_length=120)
+    keyword: str = Field(default='', max_length=500)
+    targetBudget: float | None = Field(default=None, gt=0)
+    page: int = Field(default=1, ge=1)
+    pageSize: int = Field(default=6, ge=1, le=100)
+
+    @model_validator(mode='after')
+    def ordered_price_range(self) -> Self:
+        if self.minPrice is not None and self.maxPrice is not None and self.minPrice > self.maxPrice:
+            raise ValueError('Minimum price must not exceed maximum price.')
+        return self
+
+
+class SearchHit(Listing):
+    relevanceScore: float
+    budgetScore: float | None
+    recencyScore: float
+
+
+class SearchResponse(BaseModel):
+    items: list[SearchHit]
+    total: int
+    page: int
+    pageSize: int
+    totalPages: int
+    asOf: date
