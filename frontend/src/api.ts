@@ -36,6 +36,8 @@ export type SearchResponse = {
   message: string | null
 }
 
+const unavailable = 'The search service is unavailable. Please try again.'
+
 export async function fetchListings(
   query: SearchQuery,
   signal: AbortSignal,
@@ -44,7 +46,9 @@ export async function fetchListings(
   Object.entries(query).forEach(([key, value]) => {
     if (String(value).trim() !== '') params.set(key, String(value).trim())
   })
-  const response = await fetch(`/api/listings?${params}`, { signal })
+  const response = await fetch(`/api/listings?${params}`, { signal }).catch(() => {
+    throw new Error(unavailable)
+  })
   if (!response.ok) {
     if (response.status === 422) {
       const error = await response.json()
@@ -54,7 +58,7 @@ export async function fetchListings(
           .join(' ') || 'Check your search inputs.',
       )
     }
-    throw new Error('The search service is unavailable. Please try again.')
+    throw new Error(unavailable)
   }
   return response.json()
 }

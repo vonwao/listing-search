@@ -56,12 +56,23 @@ Rank using unrounded scores. Break ties by lower price, so an under-budget home 
 
 ## Choices and limits
 
-- Keep feeds separate. `(source, id)` is the identity; similar addresses are not sufficient evidence to merge properties. Inconsistent ZIP codes remain visible.
+- Keep feeds separate. `(source, id)` is the identity. Four sample pairs (A1/B7, A2/B8, A3/B9, A5/B11) share identical coordinates and are probably the same home, but their prices differ, one pair's ZIP differs, and there is no rule for which record to trust. Both records are shown, so a page can list the same home twice. Merging needs a matching rule and a conflict policy.
+- Recency has a small effect on older data. On October 30, 2026, sample recency scores ranged from 24 to 35, moving the final score by about 3 points while budget match moved it by about 12. Recency mostly separates close candidates, and scores fall slightly each day.
 - Include active, pending, and sold records because the brief does not specify an active-only filter.
 - Literal keyword search is not semantic: “pets” matches “no pets”. A pet-policy filter would need structured data or an explicit interpretation rule.
 - Load and validate the small immutable dataset once. Search costs O(n), sorting O(m log m), and memory O(m) for m matches. A larger or changing dataset would warrant database indexes, ingestion validation, and stable snapshot/cursor pagination.
 - Keep money as numbers for comparison/scoring only; this app performs no currency transactions. Production financial arithmetic would use integer cents or decimal values.
 - The UI submits on Search, resets to page 1 when filters change, and aborts obsolete requests. Draft inputs do not change results until submitted.
 - This is a local assessment, with no authentication, persistence, geospatial matching, or production deployment. No external map or image service is used.
+
+## Assumptions to confirm
+
+These are the questions I would ask before treating this as final:
+
+- Should sold or pending listings appear in search? They are currently included and labeled.
+- Should records for the same home be merged, and which feed wins when they disagree?
+- Should a city with no matches be an API error? It currently returns HTTP 200 with a `message`, because the search was valid and found nothing.
+- Should under-budget homes be penalized less than over-budget ones? They are currently treated equally.
+- Should keyword search understand meaning? “pets” currently matches both “pets allowed” and “no pets”.
 
 AI assistance was used for the initial implementation and tests, as permitted by the assessment. Dependencies are pinned in `requirements.txt` and `frontend/package-lock.json`; framework references: [FastAPI query models](https://fastapi.tiangolo.com/tutorial/query-param-models/) and [Vite setup](https://vite.dev/guide/).

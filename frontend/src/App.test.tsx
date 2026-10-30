@@ -72,12 +72,14 @@ describe('search experience', () => {
   it('reports network failure and recovers when retried', async () => {
     const fetch = vi
       .fn()
-      .mockRejectedValueOnce(new Error('Network unavailable'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValue(response(result))
     vi.stubGlobal('fetch', fetch)
     const user = userEvent.setup()
     render(<App />)
-    expect(await screen.findByRole('alert')).toHaveTextContent('Network unavailable')
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The search service is unavailable. Please try again.',
+    )
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { name: '123 Main St' })).toBeInTheDocument()
   })
