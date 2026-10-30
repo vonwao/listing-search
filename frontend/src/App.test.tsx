@@ -85,18 +85,14 @@ describe('search experience', () => {
   it('shows the field and message from a validation error', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue(
-          response(
-            {
-              details: [
-                { field: 'pageSize', message: 'Input should be greater than or equal to 1' },
-              ],
-            },
-            422,
-          ),
+      vi.fn().mockResolvedValue(
+        response(
+          {
+            details: [{ field: 'pageSize', message: 'Input should be greater than or equal to 1' }],
+          },
+          422,
         ),
+      ),
     )
     render(<App />)
     expect(await screen.findByRole('alert')).toHaveTextContent(
