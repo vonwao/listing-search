@@ -63,6 +63,7 @@ Rank using unrounded scores. Break ties by lower price, so an under-budget home 
 - Load and validate the small immutable dataset once. Search costs O(n), sorting O(m log m), and memory O(m) for m matches. A larger or changing dataset would warrant database indexes, ingestion validation, and stable snapshot/cursor pagination.
 - Keep money as numbers for comparison/scoring only; this app performs no currency transactions. Production financial arithmetic would use integer cents or decimal values.
 - The UI submits on Search, resets to page 1 when filters change, and aborts obsolete requests. Draft inputs do not change results until submitted.
+- The submitted search and page live in the URL, so refresh, sharing and Back/Forward all work. The API validates values from a link like any other request, and an invalid link shows the error with a reset option.
 - This is a local assessment, with no authentication, persistence, geospatial matching, or production deployment. No external map or image service is used.
 
 ## Assumptions to confirm

@@ -38,21 +38,28 @@ export type SearchResponse = {
 
 const unavailable = 'The search service is unavailable. Please try again.'
 
-export async function fetchListings(
-  query: SearchQuery,
-  signal: AbortSignal,
-): Promise<SearchResponse> {
+// Retrying cannot fix these, so the UI offers a reset instead.
+export class InvalidSearchError extends Error {}
+
+export function toParams(query: SearchQuery): URLSearchParams {
   const params = new URLSearchParams()
   Object.entries(query).forEach(([key, value]) => {
     if (String(value).trim() !== '') params.set(key, String(value).trim())
   })
-  const response = await fetch(`/api/listings?${params}`, { signal }).catch(() => {
+  return params
+}
+
+export async function fetchListings(
+  query: SearchQuery,
+  signal: AbortSignal,
+): Promise<SearchResponse> {
+  const response = await fetch(`/api/listings?${toParams(query)}`, { signal }).catch(() => {
     throw new Error(unavailable)
   })
   if (!response.ok) {
     if (response.status === 422) {
       const error = await response.json()
-      throw new Error(
+      throw new InvalidSearchError(
         error.details
           ?.map((d: { field: string; message: string }) => `${d.field}: ${d.message}`)
           .join(' ') || 'Check your search inputs.',

@@ -1,5 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { fetchListings, type Filters, type SearchQuery, type SearchResponse } from './api'
+import {
+  fetchListings,
+  InvalidSearchError,
+  toParams,
+  type Filters,
+  type SearchQuery,
+  type SearchResponse,
+} from './api'
 
 const defaults: Filters = {
   minPrice: '',
@@ -16,12 +23,33 @@ const usd = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 0,
 })
 
+// The URL is the source of truth for a submitted search, so refresh, sharing and Back all work.
+// Values are not checked here: the API validates them and the error state explains any problem.
+function queryFromUrl(): SearchQuery {
+  const params = new URLSearchParams(window.location.search)
+  if (params.size === 0) return { ...defaults, page: 1 }
+  return {
+    minPrice: params.get('minPrice') ?? '',
+    maxPrice: params.get('maxPrice') ?? '',
+    minBedrooms: params.get('minBedrooms') ?? '',
+    city: params.get('city') ?? '',
+    keyword: params.get('keyword') ?? '',
+    targetBudget: params.get('targetBudget') ?? '',
+    pageSize: params.get('pageSize') ?? defaults.pageSize,
+    page: Number(params.get('page') ?? 1),
+  }
+}
+function filtersOf({ page: _page, ...filters }: SearchQuery): Filters {
+  return filters
+}
+
 export default function App() {
-  const [form, setForm] = useState<Filters>({ ...defaults })
-  const [query, setQuery] = useState<SearchQuery>({ ...defaults, page: 1 })
+  const [query, setQuery] = useState<SearchQuery>(queryFromUrl)
+  const [form, setForm] = useState<Filters>(() => filtersOf(query))
   const [data, setData] = useState<SearchResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [canRetry, setCanRetry] = useState(true)
   const [inputError, setInputError] = useState('')
   const [retry, setRetry] = useState(0)
 
@@ -35,8 +63,9 @@ export default function App() {
         if (!controller.signal.aborted) setData(result)
       })
       .catch((reason) => {
-        if (!controller.signal.aborted)
-          setError(reason instanceof Error ? reason.message : 'Could not load listings.')
+        if (controller.signal.aborted) return
+        setError(reason instanceof Error ? reason.message : 'Could not load listings.')
+        setCanRetry(!(reason instanceof InvalidSearchError))
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false)
@@ -44,6 +73,22 @@ export default function App() {
     return () => controller.abort()
   }, [query, retry])
 
+  useEffect(() => {
+    function restoreFromUrl() {
+      const restored = queryFromUrl()
+      setQuery(restored)
+      setForm(filtersOf(restored))
+      setInputError('')
+    }
+    window.addEventListener('popstate', restoreFromUrl)
+    return () => window.removeEventListener('popstate', restoreFromUrl)
+  }, [])
+
+  function navigate(next: SearchQuery) {
+    const search = `?${toParams(next)}`
+    if (search !== window.location.search) window.history.pushState(null, '', search)
+    setQuery(next)
+  }
   function search(event: FormEvent) {
     event.preventDefault()
     if (
@@ -55,12 +100,12 @@ export default function App() {
       return
     }
     setInputError('')
-    setQuery({ ...form, page: 1 })
+    navigate({ ...form, page: 1 })
   }
   function reset() {
     setForm({ ...defaults })
     setInputError('')
-    setQuery({ ...defaults, page: 1 })
+    navigate({ ...defaults, page: 1 })
   }
   function field(name: keyof Filters) {
     return {
@@ -206,7 +251,11 @@ export default function App() {
               <div className="state-panel error-panel" role="alert">
                 <h3>We couldn’t load the listings</h3>
                 <p>{error}</p>
-                <button onClick={() => setRetry(retry + 1)}>Try again</button>
+                {canRetry ? (
+                  <button onClick={() => setRetry(retry + 1)}>Try again</button>
+                ) : (
+                  <button onClick={reset}>Reset filters</button>
+                )}
               </div>
             )}
             {data?.items.length === 0 && (
@@ -267,7 +316,7 @@ export default function App() {
                 <nav className="pagination" aria-label="Results pages">
                   <button
                     disabled={data.page <= 1}
-                    onClick={() => setQuery({ ...query, page: data.page - 1 })}
+                    onClick={() => navigate({ ...query, page: data.page - 1 })}
                   >
                     <span aria-hidden="true">← </span>Previous
                   </button>
@@ -276,7 +325,7 @@ export default function App() {
                   </span>
                   <button
                     disabled={data.page >= data.totalPages}
-                    onClick={() => setQuery({ ...query, page: data.page + 1 })}
+                    onClick={() => navigate({ ...query, page: data.page + 1 })}
                   >
                     Next<span aria-hidden="true"> →</span>
                   </button>

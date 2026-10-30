@@ -84,6 +84,75 @@ describe('search experience', () => {
     expect(await screen.findByRole('heading', { name: '123 Main St' })).toBeInTheDocument()
   })
 
+  it('keeps the submitted search and page in the URL', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(result)))
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText('$450,000')
+    expect(window.location.search).toBe('')
+    await user.type(screen.getByLabelText('City'), 'Reston')
+    expect(window.location.search).toBe('')
+    await user.click(screen.getByRole('button', { name: /Search listings/ }))
+    await waitFor(() => expect(window.location.search).toContain('city=Reston'))
+    await screen.findByText('$450,000')
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(window.location.search).toContain('page=2'))
+    expect(window.location.search).toContain('city=Reston')
+  })
+
+  it('restores a shared search from the URL', async () => {
+    window.history.replaceState(null, '', '/?city=Reston&pageSize=3&page=2')
+    const fetch = vi.fn().mockResolvedValue(response(result))
+    vi.stubGlobal('fetch', fetch)
+    render(<App />)
+    await screen.findByText('$450,000')
+    const url = fetch.mock.calls[0][0]
+    expect(url).toContain('city=Reston')
+    expect(url).toContain('pageSize=3')
+    expect(url).toContain('page=2')
+    expect(url).not.toContain('targetBudget')
+    expect(screen.getByLabelText('City')).toHaveValue('Reston')
+    expect(screen.getByLabelText('Target budget ($)')).toHaveValue(null)
+    expect(screen.getByLabelText('Results per page')).toHaveValue('3')
+  })
+
+  it('restores the earlier search and form when going back', async () => {
+    const fetch = vi.fn().mockResolvedValue(response(result))
+    vi.stubGlobal('fetch', fetch)
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText('$450,000')
+    await user.type(screen.getByLabelText('City'), 'Reston')
+    await user.click(screen.getByRole('button', { name: /Search listings/ }))
+    await waitFor(() => expect(window.location.search).toContain('city=Reston'))
+    window.history.back()
+    await waitFor(() => expect(screen.getByLabelText('City')).toHaveValue(''))
+    await waitFor(() => expect(fetch.mock.calls.at(-1)?.[0]).not.toContain('city=Reston'))
+  })
+
+  it('offers a reset instead of a retry when a shared URL is invalid', async () => {
+    window.history.replaceState(null, '', '/?pageSize=0')
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        response(
+          {
+            details: [{ field: 'pageSize', message: 'Input should be greater than or equal to 1' }],
+          },
+          422,
+        ),
+      )
+      .mockResolvedValue(response(result))
+    vi.stubGlobal('fetch', fetch)
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByRole('alert')
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }))
+    expect(await screen.findByText('$450,000')).toBeInTheDocument()
+    expect(window.location.search).toContain('pageSize=6')
+  })
+
   it('shows the field and message from a validation error', async () => {
     vi.stubGlobal(
       'fetch',
