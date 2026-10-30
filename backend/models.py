@@ -1,7 +1,8 @@
 from datetime import date
-from typing import Literal, Self
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
+from pydantic_core import PydanticCustomError
 
 
 class Listing(BaseModel):
@@ -36,11 +37,13 @@ class SearchParams(BaseModel):
     page: int = Field(default=1, ge=1)
     pageSize: int = Field(default=6, ge=1, le=100)
 
-    @model_validator(mode='after')
-    def ordered_price_range(self) -> Self:
-        if self.minPrice is not None and self.maxPrice is not None and self.minPrice > self.maxPrice:
-            raise ValueError('Minimum price must not exceed maximum price.')
-        return self
+    @field_validator('maxPrice')
+    @classmethod
+    def ordered_price_range(cls, max_price: float | None, info: ValidationInfo) -> float | None:
+        min_price = info.data.get('minPrice')
+        if min_price is not None and max_price is not None and min_price > max_price:
+            raise PydanticCustomError('price_range', 'Minimum price must not exceed maximum price.')
+        return max_price
 
 
 class SearchHit(Listing):
@@ -56,3 +59,4 @@ class SearchResponse(BaseModel):
     pageSize: int
     totalPages: int
     asOf: date
+    message: str | None = None

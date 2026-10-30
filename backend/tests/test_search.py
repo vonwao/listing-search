@@ -85,3 +85,24 @@ def test_all_statuses_are_kept_unless_requirement_changes():
 def test_invalid_filters_are_rejected(params):
     with pytest.raises(ValidationError):
         SearchParams(**params)
+
+
+def test_equal_scores_prefer_the_lower_price():
+    rows = [listing('a-over', price=550_000), listing('b-under', price=450_000)]
+    result = search(rows, SearchParams(targetBudget=500_000), today=TODAY)
+    assert [r.id for r in result.items] == ['b-under', 'a-over']
+    assert result.items[0].relevanceScore == result.items[1].relevanceScore
+
+
+def test_zero_filter_values_are_applied_rather_than_ignored():
+    rows = [listing('free', price=0, bedrooms=0), listing('paid')]
+    assert [r.id for r in search(rows, SearchParams(maxPrice=0), today=TODAY).items] == ['free']
+    assert search(rows, SearchParams(minBedrooms=0), today=TODAY).total == 2
+
+
+def test_exactly_full_last_page_has_no_extra_page():
+    rows = [listing(str(n)) for n in range(4)]
+    last = search(rows, SearchParams(page=2, pageSize=2), today=TODAY)
+    past = search(rows, SearchParams(page=3, pageSize=2), today=TODAY)
+    assert (len(last.items), last.totalPages, last.message) == (2, 2, None)
+    assert (past.items, past.totalPages, past.message) == ([], 2, 'Page 3 is past the last page (2).')

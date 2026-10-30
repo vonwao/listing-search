@@ -33,6 +33,7 @@ export type SearchResponse = {
   pageSize: number
   totalPages: number
   asOf: string
+  message: string | null
 }
 
 export async function fetchListings(

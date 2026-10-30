@@ -44,3 +44,20 @@ def test_duplicate_source_id_fails_fast(tmp_path):
     path.write_text(json.dumps([row, row]), encoding='utf-8')
     with pytest.raises(ValueError, match='duplicate'):
         load_listings(path)
+
+
+def test_inverted_price_range_names_the_field_with_a_clear_message():
+    response = client.get('/api/listings', params={'minPrice': 10, 'maxPrice': 5})
+    assert response.status_code == 422
+    assert response.json()['details'] == [
+        {'field': 'maxPrice', 'message': 'Minimum price must not exceed maximum price.'},
+    ]
+
+
+def test_empty_results_explain_why():
+    def message(**params):
+        return client.get('/api/listings', params=params).json()['message']
+    assert message(city='Atlantis') == "No listings found in city 'Atlantis'."
+    assert message(city='Reston', minBedrooms=99) == 'No listings match these filters.'
+    assert message(page=100) == 'Page 100 is past the last page (2).'
+    assert message(city='Reston') is None

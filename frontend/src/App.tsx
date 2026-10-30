@@ -212,6 +212,7 @@ export default function App() {
             {data?.items.length === 0 && (
               <div className="state-panel">
                 <h3>No listings found</h3>
+                {data.message && <p>{data.message}</p>}
                 <p>Try a different city, a wider price range, or fewer filters.</p>
                 <button onClick={reset}>Reset filters</button>
               </div>

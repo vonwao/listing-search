@@ -16,6 +16,18 @@ def score(listing: Listing, target_budget: float | None, today: date) -> tuple[f
     return 0.7 * budget + 0.3 * recency, budget, recency
 
 
+def empty_result_message(listings: Sequence[Listing], params: SearchParams, total: int, total_pages: int) -> str | None:
+    # A valid search that finds nothing is a result, not a failed request, but it should say why.
+    if total and params.page > total_pages:
+        return f'Page {params.page} is past the last page ({total_pages}).'
+    if total:
+        return None
+    city = params.city.casefold()
+    if city and not any(listing.city.strip().casefold() == city for listing in listings):
+        return f"No listings found in city '{params.city}'."
+    return 'No listings match these filters.'
+
+
 def search(listings: Sequence[Listing], params: SearchParams, *, today: date) -> SearchResponse:
     city, keyword = params.city.casefold(), params.keyword.casefold()
     ranked = []
@@ -33,8 +45,10 @@ def search(listings: Sequence[Listing], params: SearchParams, *, today: date) ->
         relevance, budget, recency = score(listing, params.targetBudget, today)
         ranked.append((relevance, listing, budget, recency))
 
-    # IDs are unique only within a feed. Sort before slicing for stable pages.
-    ranked.sort(key=lambda row: (-row[0], row[1].source, row[1].id))
+    # On a tie, prefer the lower price. IDs are unique only within a feed, so finish with
+    # (source, id). Sort before slicing for stable pages.
+    ranked.sort(key=lambda row: (-row[0], row[1].price, row[1].source, row[1].id))
+    total_pages = ceil(len(ranked) / params.pageSize)
     start = (params.page - 1) * params.pageSize
     items = [
         SearchHit(
@@ -47,5 +61,6 @@ def search(listings: Sequence[Listing], params: SearchParams, *, today: date) ->
     ]
     return SearchResponse(
         items=items, total=len(ranked), page=params.page, pageSize=params.pageSize,
-        totalPages=ceil(len(ranked) / params.pageSize), asOf=today,
+        totalPages=total_pages, asOf=today,
+        message=empty_result_message(listings, params, len(ranked), total_pages),
     )

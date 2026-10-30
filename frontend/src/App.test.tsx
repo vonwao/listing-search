@@ -50,11 +50,20 @@ describe('search experience', () => {
   it('shows a useful empty state and lets the user reset filters', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(response({ ...result, items: [], total: 0, totalPages: 0 })),
+      vi.fn().mockResolvedValue(
+        response({
+          ...result,
+          items: [],
+          total: 0,
+          totalPages: 0,
+          message: "No listings found in city 'Atlantis'.",
+        }),
+      ),
     )
     const user = userEvent.setup()
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'No listings found' })).toBeInTheDocument()
+    expect(screen.getByText("No listings found in city 'Atlantis'.")).toBeInTheDocument()
     await user.type(screen.getByLabelText('City'), 'Atlantis')
     await user.click(screen.getByRole('button', { name: 'Reset filters' }))
     expect(screen.getByLabelText('City')).toHaveValue('')
@@ -71,6 +80,44 @@ describe('search experience', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Network unavailable')
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('heading', { name: '123 Main St' })).toBeInTheDocument()
+  })
+
+  it('shows the field and message from a validation error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          response(
+            {
+              details: [
+                { field: 'pageSize', message: 'Input should be greater than or equal to 1' },
+              ],
+            },
+            422,
+          ),
+        ),
+    )
+    render(<App />)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'pageSize: Input should be greater than or equal to 1',
+    )
+  })
+
+  it('disables Previous on the first page and Next on the last page', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(response(result))
+      .mockResolvedValue(response({ ...result, page: 2 }))
+    vi.stubGlobal('fetch', fetch)
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText('$450,000')
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled())
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled()
   })
 
   it('prevents an inverted price range from making a request', async () => {

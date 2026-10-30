@@ -52,7 +52,7 @@ relevance = 100 * (0.7 * budgetMatch + 0.3 * recency)
 
 Without a budget, relevance is `100 * recency`. Scores are bounded from 0–100. A listing exactly at budget and listed today scores 100; the same price at 30 days old scores 85. Under- and over-budget prices are penalized equally: use `maxPrice` for a hard ceiling. The 70/30 weights prioritize price fit while still rewarding freshness; they are an explicit product assumption, not a learned model. Recency decays smoothly rather than making every old record score zero. Future dates clamp to today. The API returns the UTC scoring date.
 
-Rank using unrounded scores, then `(source, id)` for a stable tie-break. Round displayed scores only. Filter and sort **before** pagination. Unknown cities return HTTP 200 with zero matches; valid pages beyond the end return an empty list with the original totals. Invalid ranges, negative values, non-finite numbers, noninteger page/bedroom values, and unknown query fields return HTTP 422 with field/message details. `targetBudget` must be positive.
+Rank using unrounded scores. Break ties by lower price, so an under-budget home beats an equally distant over-budget one, then by `(source, id)` for a stable order. Round displayed scores only. Filter and sort **before** pagination. A valid search that finds nothing is a result rather than a failed request, so it returns HTTP 200 with a `message` saying why: unknown cities and empty filter combinations return zero matches, and pages beyond the end return an empty list with the original totals. Invalid ranges, negative values, non-finite numbers, noninteger page/bedroom values, and unknown query fields return HTTP 422 with field/message details. `targetBudget` must be positive.
 
 ## Choices and limits
 
