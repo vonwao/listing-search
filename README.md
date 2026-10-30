@@ -75,4 +75,4 @@ These are the questions I would ask before treating this as final:
 - Should under-budget homes be penalized less than over-budget ones? They are currently treated equally.
 - Should keyword search understand meaning? “pets” currently matches both “pets allowed” and “no pets”.
 
-AI assistance was used for the initial implementation and tests, as permitted by the assessment. Dependencies are pinned in `requirements.txt` and `frontend/package-lock.json`; framework references: [FastAPI query models](https://fastapi.tiangolo.com/tutorial/query-param-models/) and [Vite setup](https://vite.dev/guide/).
+I built this working closely with AI coding tools (Claude Code and Codex), as the assessment encourages. I directed the scope and decisions, and used both tools to cross-check the implementation, tests and this README against the requirements. Dependencies are pinned in `requirements.txt` and `frontend/package-lock.json`; framework references: [FastAPI query models](https://fastapi.tiangolo.com/tutorial/query-param-models/) and [Vite setup](https://vite.dev/guide/).
