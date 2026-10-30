@@ -25,6 +25,8 @@ export type Listing = {
   relevanceScore: number
   budgetScore: number | null
   recencyScore: number
+  ageDays: number
+  budgetDifference: number | null
   possibleDuplicates: { source: string; id: string }[]
 }
 export type SearchResponse = {

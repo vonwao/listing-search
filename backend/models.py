@@ -55,6 +55,8 @@ class SearchHit(Listing):
     relevanceScore: float
     budgetScore: float | None
     recencyScore: float
+    ageDays: int
+    budgetDifference: float | None
     possibleDuplicates: list[ListingRef]
 
 

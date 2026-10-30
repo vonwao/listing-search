@@ -441,3 +441,8 @@ footer {
   padding: 3px 8px;
   margin: 10px 0 0;
 }
+.reason {
+  font-size: 11px;
+  color: #3f6949;
+  margin: 8px 0 0;
+}

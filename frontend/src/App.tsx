@@ -4,6 +4,7 @@ import {
   InvalidSearchError,
   toParams,
   type Filters,
+  type Listing,
   type SearchQuery,
   type SearchResponse,
 } from './api'
@@ -22,6 +23,16 @@ const usd = new Intl.NumberFormat('en-US', {
   currency: 'USD',
   maximumFractionDigits: 0,
 })
+
+function rankingReason({ ageDays, budgetDifference }: Listing): string {
+  const age = ageDays === 0 ? 'today' : `${ageDays} ${ageDays === 1 ? 'day' : 'days'} ago`
+  if (budgetDifference === null) return `Listed ${age}`
+  const budget =
+    budgetDifference === 0
+      ? 'On budget'
+      : `${usd.format(Math.abs(budgetDifference))} ${budgetDifference > 0 ? 'over' : 'under'} budget`
+  return `${budget} · listed ${age}`
+}
 
 // The URL is the source of truth for a submitted search, so refresh, sharing and Back all work.
 // Values are not checked here: the API validates them and the error state explains any problem.
@@ -307,6 +318,7 @@ export default function App() {
                         </div>
                         <span className="listed">Listed {item.listedDate}</span>
                       </div>
+                      <p className="reason">{rankingReason(item)}</p>
                       <details className="score-detail">
                         <summary>Score breakdown</summary>
                         <p>

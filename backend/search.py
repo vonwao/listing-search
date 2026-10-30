@@ -7,10 +7,14 @@ from collections.abc import Sequence
 from .models import Listing, ListingRef, SearchHit, SearchParams, SearchResponse
 
 
+def age_in_days(listing: Listing, today: date) -> int:
+    # Future dates are treated as today.
+    return max(0, (today - listing.listedDate).days)
+
+
 def score(listing: Listing, target_budget: float | None, today: date) -> tuple[float, float | None, float]:
-    # A 30-day-old listing has 50% recency. Future dates are treated as today.
-    age_days = max(0, (today - listing.listedDate).days)
-    recency = 1 / (1 + age_days / 30)
+    # A 30-day-old listing has 50% recency.
+    recency = 1 / (1 + age_in_days(listing, today) / 30)
     if target_budget is None:
         return recency, None, recency
     budget = max(0, 1 - abs(listing.price - target_budget) / target_budget)
@@ -73,6 +77,8 @@ def search(listings: Sequence[Listing], params: SearchParams, *, today: date) ->
             relevanceScore=round(relevance * 100, 2),
             budgetScore=None if budget is None else round(budget * 100, 2),
             recencyScore=round(recency * 100, 2),
+            ageDays=age_in_days(listing, today),
+            budgetDifference=None if params.targetBudget is None else listing.price - params.targetBudget,
             possibleDuplicates=duplicates[(listing.source, listing.id)],
         )
         for relevance, listing, budget, recency in ranked[start:start + params.pageSize]

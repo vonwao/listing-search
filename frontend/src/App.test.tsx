@@ -20,6 +20,8 @@ const item = {
   relevanceScore: 80,
   budgetScore: 90,
   recencyScore: 56.67,
+  ageDays: 62,
+  budgetDifference: -50000,
   possibleDuplicates: [],
 }
 const result = { items: [item], total: 7, page: 1, pageSize: 6, totalPages: 2, asOf: '2026-10-30' }
@@ -85,15 +87,27 @@ describe('search experience', () => {
     expect(await screen.findByRole('heading', { name: '123 Main St' })).toBeInTheDocument()
   })
 
-  it('flags possible duplicates', async () => {
+  it('explains each ranking in plain English and flags possible duplicates', async () => {
     const items = [
-      item,
-      { ...item, id: 'twin', possibleDuplicates: [{ source: 'MLS_B', id: 'B7' }] },
+      { ...item, id: 'over', budgetDifference: 25000, ageDays: 58 },
+      { ...item, id: 'under', budgetDifference: -1000, ageDays: 1 },
+      { ...item, id: 'exact', budgetDifference: 0, ageDays: 0 },
+      {
+        ...item,
+        id: 'none',
+        budgetDifference: null,
+        ageDays: 3,
+        possibleDuplicates: [{ source: 'MLS_B', id: 'B7' }],
+      },
     ]
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...result, items })))
     render(<App />)
-    expect(await screen.findByText('Possibly the same home as MLS_B · B7')).toBeInTheDocument()
+    expect(await screen.findByText('$25,000 over budget · listed 58 days ago')).toBeInTheDocument()
+    expect(screen.getByText('$1,000 under budget · listed 1 day ago')).toBeInTheDocument()
+    expect(screen.getByText('On budget · listed today')).toBeInTheDocument()
+    expect(screen.getByText('Listed 3 days ago')).toBeInTheDocument()
     expect(screen.getAllByText(/Possibly the same home/)).toHaveLength(1)
+    expect(screen.getByText('Possibly the same home as MLS_B · B7')).toBeInTheDocument()
   })
 
   it('keeps the submitted search and page in the URL', async () => {

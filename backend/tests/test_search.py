@@ -116,3 +116,12 @@ def test_identical_coordinates_in_different_feeds_are_flagged_but_not_merged():
     assert [(d.source, d.id) for d in items['1'].possibleDuplicates] == [('B', '2')]
     assert [(d.source, d.id) for d in items['2'].possibleDuplicates] == [('A', '1'), ('A', '3')]
     assert items['4'].possibleDuplicates == []
+
+
+def test_ranking_details_report_age_and_signed_budget_difference():
+    rows = [listing('over', price=525_000, listedDate=TODAY-timedelta(days=58)),
+            listing('future', price=450_000, listedDate=TODAY+timedelta(days=2))]
+    items = {r.id: r for r in search(rows, SearchParams(targetBudget=500_000), today=TODAY).items}
+    assert (items['over'].ageDays, items['over'].budgetDifference) == (58, 25_000)
+    assert (items['future'].ageDays, items['future'].budgetDifference) == (0, -50_000)
+    assert search(rows, SearchParams(), today=TODAY).items[0].budgetDifference is None
